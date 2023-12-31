@@ -16,32 +16,41 @@ import java.util.HashSet;
 
 public class HelloApplication extends Application {
 
-    public static final double WIDTH = 800;
-    public static final double HEIGHT = 800;
+    public static final double WIDTH = 1500;
+    public static final double HEIGHT = 900;
     private static final double CAR_WIDTH = 50;
     private static final double CAR_HEIGHT = 50;
     private double velocity = 0;
-    private final double acceleration = 0.07;
+    private final double acceleration = 0.03;
     private double angle = 0;
     private final double maxSpeed = 7;
     private final Set<String> pressedKeys = new HashSet<>();
 
+    private final double turnAngle = 2;
+
     private final boolean smoothMovement = false;
 
-    private final List<Blob> blobs = new ArrayList<>(); // List to manage Blob objects
+    private final List<Minor> minors = new ArrayList<>(); // List to manage Blob objects
+
+    private boolean isDrifting = false;
+    private double driftAngle = 0;
+    private final double driftIntensity = 2; // Adjust as needed for noticeable but controlled drift
+    private boolean wasDrifting = false;
+
+
 
     @Override
     public void start(Stage stage) {
         Pane root = new Pane();
         root.setStyle("-fx-background-color: Silver");
-        root.setPrefSize(800, 800);
-        root.setLayoutX(500);
-        root.setLayoutY(100);
+        root.setPrefSize(1500, 900);
+        root.setLayoutX(150);
+        root.setLayoutY(50);
         Pane backGround = new Pane(root);
         backGround.setStyle("-fx-background-color: Gray");
         Scene scene = new Scene(backGround, 1800, 1000);
 
-        Image carImage = new Image("file:/C:/Users/Luej9/Desktop/DOM/car.png");
+        Image carImage = new Image("file:/C:/Users/juanl/IdeaProjects/DrivingOverMinersNew/src/main/resources/com/example/carsimulation/DOM/car.png");
         ImageView carImageView = new ImageView(carImage);
 
         carImageView.setFitWidth(CAR_WIDTH);
@@ -61,13 +70,6 @@ public class HelloApplication extends Application {
         scene.setOnKeyPressed(e -> pressedKeys.add(e.getCode().toString()));
         scene.setOnKeyReleased(e -> pressedKeys.remove(e.getCode().toString()));
 
-        // Create Blob objects and add them to the list
-        for (int i = 0; i < 10; i++) {
-            Blob blob = new Blob(20, 20, 20);
-            blobs.add(blob);
-            root.getChildren().add(blob);
-        }
-
         new AnimationTimer() {
             @Override
             public void handle(long now) {
@@ -80,18 +82,40 @@ public class HelloApplication extends Application {
                 }
                 if (pressedKeys.contains("LEFT") && (velocity > 0.3 || velocity < -0.3)) {
                     if (velocity > 0) {
-                        angle -= 3;
+                        angle -= turnAngle;
                     } else {
-                        angle += 3;
+                        angle += turnAngle;
                     }
                 }
                 if (pressedKeys.contains("RIGHT") && (velocity > 0.3 || velocity < -0.3)) {
                     if (velocity > 0) {
-                        angle += 3;
+                        angle += turnAngle;
                     } else {
-                        angle -= 3;
+                        angle -= turnAngle;
                     }
                 }
+
+                if (pressedKeys.contains("W") && velocity <= maxSpeed) {
+                    velocity += acceleration;
+                }
+                if (pressedKeys.contains("S") && velocity >= maxSpeed - 1.5 * maxSpeed) {
+                    velocity -= acceleration / 2;
+                }
+                if (pressedKeys.contains("A") && (velocity > 0.3 || velocity < -0.3)) {
+                    if (velocity > 0) {
+                        angle -= turnAngle;
+                    } else {
+                        angle += turnAngle;
+                    }
+                }
+                if (pressedKeys.contains("D") && (velocity > 0.3 || velocity < -0.3)) {
+                    if (velocity > 0) {
+                        angle += turnAngle;
+                    } else {
+                        angle -= turnAngle;
+                    }
+                }
+
 
                 // Update car position
                 double radian = Math.toRadians(angle);
@@ -116,14 +140,49 @@ public class HelloApplication extends Application {
                         if (smoothMovement) {
                             angle += 180;
                         } else {
-                            velocity = 0;
+                            if (velocity > 0.5){
+                                velocity *= -0.5;}
+                            else {
+                                velocity = 0;
+                            }
                         }
                     } else if (velocity < 0) {
-                        velocity = 0;
+                        if (velocity < -0.5){
+                            velocity *= -0.5;}
+                        else {
+                            velocity = 0;
+                        }
                     }
                     if (angle >= 360) {
                         angle -= 360;
                     }
+                }
+                if (pressedKeys.contains("UP") && pressedKeys.contains("DOWN") && Math.abs(velocity) > 1) {
+                    if (!wasDrifting) {
+                        driftAngle = angle;
+                        wasDrifting = true;
+                    }
+                } else {
+                    wasDrifting = false;
+                }
+                if (pressedKeys.contains("W") && pressedKeys.contains("S") && Math.abs(velocity) > 1) {
+                    isDrifting = true;
+                    if (!wasDrifting) {
+                        driftAngle = angle;
+                        wasDrifting = true;
+                    }
+                } else {
+                    isDrifting = false;
+                    wasDrifting = false;
+                }
+
+                if (isDrifting) {
+
+                    double driftRadian = Math.toRadians(driftAngle);
+                    double driftDeltaX = driftIntensity * Math.cos(driftRadian);
+                    double driftDeltaY = driftIntensity * Math.sin(driftRadian);
+                    newX += driftDeltaX;
+                    newY += driftDeltaY;
                 }
 
                 carImageView.setX(newX);
@@ -136,28 +195,12 @@ public class HelloApplication extends Application {
                     velocity += 0.01;
                 }
 
-                for (Blob bl : blobs) {
-                    bl.update();
-                    if (carImageView.getBoundsInParent().intersects(bl.getBoundsInParent())) {
-                        if (velocity > 2.5|| velocity < -2.5) {
-                            // Remove the blob from the list and the root
-                            root.getChildren().remove(bl);
-                            blobs.remove(bl);
-                            Blob blob = new Blob(20, 20, 20);
-                            blobs.add(blob);
-                            root.getChildren().add(blob);
-
-                        }
-                    }
-                }
 
 
-                tempoDisplay.setText("Speed: " + String.format("%.1f", velocity));
 
-                // Update Blob movements
-                for (Blob blob : blobs) {
-                    blob.update();
-                }
+                tempoDisplay.setText("Speed: " + String.format("%.0f", (velocity/6)*100));
+
+
             }
         }.start();
 
