@@ -30,17 +30,25 @@ public class HelloApplication extends Application {
 
     private final boolean smoothMovement = false;
 
-    private final List<Minor> minors = new ArrayList<>(); // List to manage Blob objects
+    private final List<Minor> minors = new ArrayList<>();
 
     private boolean isDrifting = false;
     private double driftAngle = 0;
     private final double driftIntensity = 2; // Adjust as needed for noticeable but controlled drift
     private boolean wasDrifting = false;
 
+    private final boolean blueCarMode = true;
+
+    private final int minorCount = 1;
+
 
 
     @Override
     public void start(Stage stage) {
+
+        Image kidLeft = new Image("file:/C:/Users/juanl/IdeaProjects/DrivingOverMinersNew/src/main/resources/com/example/carsimulation/DOM/KidLeft.png");
+        Image kidRight = new Image("file:/C:/Users/juanl/IdeaProjects/DrivingOverMinersNew/src/main/resources/com/example/carsimulation/DOM/KidRight.png");
+
         Pane root = new Pane();
         root.setStyle("-fx-background-color: Silver");
         root.setPrefSize(1500, 900);
@@ -51,7 +59,14 @@ public class HelloApplication extends Application {
         Scene scene = new Scene(backGround, 1800, 1000);
 
         Image carImage = new Image("file:/C:/Users/juanl/IdeaProjects/DrivingOverMinersNew/src/main/resources/com/example/carsimulation/DOM/car.png");
-        ImageView carImageView = new ImageView(carImage);
+        Image blueCarImage = new Image("file:/C:/Users/juanl/IdeaProjects/DrivingOverMinersNew/src/main/resources/com/example/carsimulation/DOM/BlueCar.png");
+        ImageView carImageView = new ImageView();
+        if (blueCarMode){
+            carImageView.setImage(blueCarImage);
+        }
+        else {
+            carImageView.setImage(carImage);
+        }
 
         carImageView.setFitWidth(CAR_WIDTH);
         carImageView.setFitHeight(CAR_HEIGHT);
@@ -70,30 +85,15 @@ public class HelloApplication extends Application {
         scene.setOnKeyPressed(e -> pressedKeys.add(e.getCode().toString()));
         scene.setOnKeyReleased(e -> pressedKeys.remove(e.getCode().toString()));
 
+        for (int i = 0; i < minorCount; i++) {
+            Minor minor = new Minor(kidLeft, kidRight, 750, 450, 1);
+            minors.add(minor);
+            root.getChildren().add(minor.imageView);
+        }
+
         new AnimationTimer() {
             @Override
             public void handle(long now) {
-                // Handle car movement
-                if (pressedKeys.contains("UP") && velocity <= maxSpeed) {
-                    velocity += acceleration;
-                }
-                if (pressedKeys.contains("DOWN") && velocity >= maxSpeed - 1.5 * maxSpeed) {
-                    velocity -= acceleration / 2;
-                }
-                if (pressedKeys.contains("LEFT") && (velocity > 0.3 || velocity < -0.3)) {
-                    if (velocity > 0) {
-                        angle -= turnAngle;
-                    } else {
-                        angle += turnAngle;
-                    }
-                }
-                if (pressedKeys.contains("RIGHT") && (velocity > 0.3 || velocity < -0.3)) {
-                    if (velocity > 0) {
-                        angle += turnAngle;
-                    } else {
-                        angle -= turnAngle;
-                    }
-                }
 
                 if (pressedKeys.contains("W") && velocity <= maxSpeed) {
                     velocity += acceleration;
@@ -103,16 +103,33 @@ public class HelloApplication extends Application {
                 }
                 if (pressedKeys.contains("A") && (velocity > 0.3 || velocity < -0.3)) {
                     if (velocity > 0) {
-                        angle -= turnAngle;
+                        if (isDrifting){
+                            angle -= turnAngle - 1;
+                        } else {
+                            angle -= turnAngle;
+                        }
                     } else {
-                        angle += turnAngle;
+                        if (isDrifting){
+                            angle += turnAngle + 1;
+                        } else {
+                            angle += turnAngle;
+                        }
                     }
                 }
                 if (pressedKeys.contains("D") && (velocity > 0.3 || velocity < -0.3)) {
                     if (velocity > 0) {
-                        angle += turnAngle;
+                        if (isDrifting){
+                            angle += turnAngle - 1;
+                        } else {
+                            angle += turnAngle;
+                        }
+
                     } else {
-                        angle -= turnAngle;
+                        if (isDrifting){
+                            angle -= turnAngle + 1;
+                        } else {
+                            angle -= turnAngle;
+                        }
                     }
                 }
 
@@ -177,6 +194,12 @@ public class HelloApplication extends Application {
                 }
 
                 if (isDrifting) {
+
+                    if (velocity > 0){
+                        velocity -= 0.07;
+                    } else {
+                        velocity += 0.07;
+                    }
 
                     double driftRadian = Math.toRadians(driftAngle);
                     double driftDeltaX = driftIntensity * Math.cos(driftRadian);
